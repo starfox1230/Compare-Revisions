@@ -193,6 +193,24 @@ def index():
                     border-color: #007bff #007bff #333;
                     color: white; /* Improve contrast for active tab */
                 }
+                /* Scroll to Top button */
+                #scrollToTopBtn {
+                    position: fixed;
+                    right: 30px;
+                    bottom: 30px;
+                    background-color: #007bff;
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 50px;
+                    border: none;
+                    cursor: pointer;
+                    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+                    font-size: 14px;
+                    display: none;
+                }
+                #scrollToTopBtn:hover {
+                    background-color: #0056b3;
+                }
             </style>
         </head>
         <body>
@@ -254,6 +272,30 @@ def index():
                     {% endfor %}
                 {% endif %}
             </div>
+
+            <!-- Scroll to Top Button -->
+            <button id="scrollToTopBtn">Top</button>
+
+            <script>
+                // Get the button
+                var mybutton = document.getElementById("scrollToTopBtn");
+
+                // When the user scrolls down 20px from the top of the document, show the button
+                window.onscroll = function() {
+                    if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+                        mybutton.style.display = "block";
+                    } else {
+                        mybutton.style.display = "none";
+                    }
+                };
+
+                // When the user clicks on the button, scroll to the top of the document
+                mybutton.onclick = function() {
+                    document.body.scrollTop = 0;
+                    document.documentElement.scrollTop = 0;
+                };
+            </script>
+
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
         </body>
     </html>
