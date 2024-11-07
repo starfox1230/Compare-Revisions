@@ -34,42 +34,92 @@ def calculate_change_percentage(resident_text, attending_text):
 
 # Function to compare reports section by section
 def create_diff_by_section(resident_text, attending_text):
+    # Normalize the text for comparison
     resident_text = normalize_text(resident_text)
     attending_text = normalize_text(remove_attending_review_line(attending_text))
 
+    # Extract sections
     resident_sections = extract_sections(resident_text)
     attending_sections = extract_sections(attending_text)
 
     diff_html = ""
 
-    # Compare sections (matching section headers)
+    # Compare sections by matching headers
     for res_sec, att_sec in zip(resident_sections, attending_sections):
         res_header = res_sec["header"]
         att_header = att_sec["header"]
         res_content = res_sec["content"]
         att_content = att_sec["content"]
 
-        # Section headers (usually identical, but highlight if different)
+        # Add section header
         diff_html += f"{res_header}<br>"
 
-        # Compare section content word by word
+        # Word-by-word comparison with special handling for large blocks
         matcher = difflib.SequenceMatcher(None, res_content.split(), att_content.split())
         section_diff = ""
 
         for opcode, a1, a2, b1, b2 in matcher.get_opcodes():
+            # Handle matched (equal) words
             if opcode == 'equal':
                 section_diff += " ".join(res_content.split()[a1:a2]) + " "
-            elif opcode == 'replace':
-                section_diff += '<span style="color:#ff6b6b;text-decoration:line-through;">' + " ".join(res_content.split()[a1:a2]) + '</span> '
-                section_diff += '<span style="color:lightgreen;">' + " ".join(att_content.split()[b1:b2]) + '</span> '
-            elif opcode == 'delete':
-                section_diff += '<span style="color:#ff6b6b;text-decoration:line-through;">' + " ".join(res_content.split()[a1:a2]) + '</span> '
-            elif opcode == 'insert':
-                section_diff += '<span style="color:lightgreen;">' + " ".join(att_content.split()[b1:b2]) + '</span> '
 
-        diff_html += section_diff + "<br><br>"  # Preserve line breaks between sections
+            # Handle large insertions as a distinct block
+            elif opcode == 'insert':
+                inserted_text = " ".join(att_content.split()[b1:b2])
+                if len(inserted_text.split()) > 3:  # Treat large insertions as a block
+                    section_diff += f'<div style="color:lightgreen;">[Inserted: {inserted_text}]</div> '
+                else:
+                    section_diff += f'<span style="color:lightgreen;">{inserted_text}</span> '
+
+            # Handle large deletions as a distinct block
+            elif opcode == 'delete':
+                deleted_text = " ".join(res_content.split()[a1:a2])
+                if len(deleted_text.split()) > 3:  # Treat large deletions as a block
+                    section_diff += f'<div style="color:#ff6b6b;text-decoration:line-through;">[Deleted: {deleted_text}]</div> '
+                else:
+                    section_diff += f'<span style="color:#ff6b6b;text-decoration:line-through;">{deleted_text}</span> '
+
+            # Handle replacements, with nested matching for granularity
+            elif opcode == 'replace':
+                res_words = res_content.split()[a1:a2]
+                att_words = att_content.split()[b1:b2]
+                if len(res_words) > 3 or len(att_words) > 3:  # Treat large replacements as blocks
+                    section_diff += (
+                        f'<div style="color:#ff6b6b;text-decoration:line-through;">[Replaced: {" ".join(res_words)}]</div> '
+                        f'<div style="color:lightgreen;">[With: {" ".join(att_words)}]</div> '
+                    )
+                else:
+                    # Fine-grained word-by-word replacement within small changes
+                    word_matcher = difflib.SequenceMatcher(None, res_words, att_words)
+                    for word_opcode, w_a1, w_a2, w_b1, w_b2 in word_matcher.get_opcodes():
+                        if word_opcode == 'equal':
+                            section_diff += " ".join(res_words[w_a1:w_a2]) + " "
+                        elif word_opcode == 'replace':
+                            section_diff += (
+                                '<span style="color:#ff6b6b;text-decoration:line-through;">' +
+                                " ".join(res_words[w_a1:w_a2]) +
+                                '</span> <span style="color:lightgreen;">' +
+                                " ".join(att_words[w_b1:w_b2]) +
+                                '</span> '
+                            )
+                        elif word_opcode == 'delete':
+                            section_diff += (
+                                '<span style="color:#ff6b6b;text-decoration:line-through;">' +
+                                " ".join(res_words[w_a1:w_a2]) +
+                                '</span> '
+                            )
+                        elif word_opcode == 'insert':
+                            section_diff += (
+                                '<span style="color:lightgreen;">' +
+                                " ".join(att_words[w_b1:w_b2]) +
+                                '</span> '
+                            )
+
+        # Add the section diff to the main HTML with line breaks for readability
+        diff_html += section_diff + "<br><br>"
 
     return diff_html
+
 
 # Function to extract cases from the pasted text block
 def extract_cases(text):
