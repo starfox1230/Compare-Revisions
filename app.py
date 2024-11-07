@@ -33,75 +33,75 @@ def calculate_change_percentage(resident_text, attending_text):
     return round((1 - matcher.ratio()) * 100, 2)
 
 
-def split_into_sentences(text):
-    # Split text into sentences based on punctuation followed by whitespace or line breaks
-    sentences = re.split(r'(?<=[.!?])\s+', text)
-    return [sentence.strip() for sentence in sentences if sentence.strip()]
+def split_into_paragraphs(text):
+    # Split the text into paragraphs based on double line breaks or single line breaks after punctuation
+    paragraphs = re.split(r'\n{2,}|\n(?=\w)', text)
+    return [para.strip() for para in paragraphs if para.strip()]
 
-# Function to compare reports section by section
 def create_diff_by_section(resident_text, attending_text):
     # Normalize text for comparison
     resident_text = normalize_text(resident_text)
     attending_text = normalize_text(remove_attending_review_line(attending_text))
 
-    # Manually split the sections by sentences
-    resident_sentences = split_into_sentences(resident_text)
-    attending_sentences = split_into_sentences(attending_text)
+    # Split text into paragraphs instead of sentences
+    resident_paragraphs = split_into_paragraphs(resident_text)
+    attending_paragraphs = split_into_paragraphs(attending_text)
 
     diff_html = ""
 
-    # Use SequenceMatcher on the sentence level first
-    matcher = difflib.SequenceMatcher(None, resident_sentences, attending_sentences)
+    # Use SequenceMatcher on the paragraph level first
+    matcher = difflib.SequenceMatcher(None, resident_paragraphs, attending_paragraphs)
     for opcode, a1, a2, b1, b2 in matcher.get_opcodes():
-        # Handle matched (equal) sentences
+        # Handle matched (equal) paragraphs
         if opcode == 'equal':
-            for sentence in resident_sentences[a1:a2]:
-                diff_html += sentence + " "
-        
-        # Handle inserted sentences as a block
+            for paragraph in resident_paragraphs[a1:a2]:
+                diff_html += paragraph + "<br><br>"
+
+        # Handle inserted paragraphs as a block
         elif opcode == 'insert':
-            for sentence in attending_sentences[b1:b2]:
-                diff_html += f'<div style="color:lightgreen;">[Inserted: {sentence}]</div> '
-        
-        # Handle deleted sentences as a block
+            for paragraph in attending_paragraphs[b1:b2]:
+                diff_html += f'<div style="color:lightgreen;">[Inserted: {paragraph}]</div><br><br>'
+
+        # Handle deleted paragraphs as a block
         elif opcode == 'delete':
-            for sentence in resident_sentences[a1:a2]:
-                diff_html += f'<div style="color:#ff6b6b;text-decoration:line-through;">[Deleted: {sentence}]</div> '
-        
-        # Handle sentence replacements by word-by-word comparison within each sentence
+            for paragraph in resident_paragraphs[a1:a2]:
+                diff_html += f'<div style="color:#ff6b6b;text-decoration:line-through;">[Deleted: {paragraph}]</div><br><br>'
+
+        # Handle paragraph replacements by word-by-word comparison within each paragraph
         elif opcode == 'replace':
-            res_sentences = resident_sentences[a1:a2]
-            att_sentences = attending_sentences[b1:b2]
-            for res_sentence, att_sentence in zip(res_sentences, att_sentences):
-                # Compare the words within the mismatched sentences
-                word_matcher = difflib.SequenceMatcher(None, res_sentence.split(), att_sentence.split())
+            res_paragraphs = resident_paragraphs[a1:a2]
+            att_paragraphs = attending_paragraphs[b1:b2]
+            for res_paragraph, att_paragraph in zip(res_paragraphs, att_paragraphs):
+                # Compare the words within the mismatched paragraphs
+                word_matcher = difflib.SequenceMatcher(None, res_paragraph.split(), att_paragraph.split())
                 for word_opcode, w_a1, w_a2, w_b1, w_b2 in word_matcher.get_opcodes():
                     if word_opcode == 'equal':
-                        diff_html += " ".join(res_sentence.split()[w_a1:w_a2]) + " "
+                        diff_html += " ".join(res_paragraph.split()[w_a1:w_a2]) + " "
                     elif word_opcode == 'replace':
                         diff_html += (
                             '<span style="color:#ff6b6b;text-decoration:line-through;">' +
-                            " ".join(res_sentence.split()[w_a1:w_a2]) +
+                            " ".join(res_paragraph.split()[w_a1:w_a2]) +
                             '</span> <span style="color:lightgreen;">' +
-                            " ".join(att_sentence.split()[w_b1:w_b2]) +
+                            " ".join(att_paragraph.split()[w_b1:w_b2]) +
                             '</span> '
                         )
                     elif word_opcode == 'delete':
                         diff_html += (
                             '<span style="color:#ff6b6b;text-decoration:line-through;">' +
-                            " ".join(res_sentence.split()[w_a1:w_a2]) +
+                            " ".join(res_paragraph.split()[w_a1:w_a2]) +
                             '</span> '
                         )
                     elif word_opcode == 'insert':
                         diff_html += (
                             '<span style="color:lightgreen;">' +
-                            " ".join(att_sentence.split()[w_b1:w_b2]) +
+                            " ".join(att_paragraph.split()[w_b1:w_b2]) +
                             '</span> '
                         )
 
-                diff_html += "<br><br>"  # Separate each replaced sentence with line breaks
+                diff_html += "<br><br>"  # Separate each replaced paragraph with line breaks
 
     return diff_html
+
 
 
 # Function to extract cases from the pasted text block
