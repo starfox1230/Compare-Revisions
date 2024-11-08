@@ -34,6 +34,9 @@ def calculate_change_percentage(resident_text, attending_text):
 
 
 
+
+
+
 def split_into_clauses(text):
     # Split the text into clauses based on punctuation like commas, semicolons, and periods
     clauses = re.split(r'(?<=[,;.])\s+', text)
@@ -76,8 +79,9 @@ def create_diff_by_section(resident_text, attending_text):
                 # Compare the words within the mismatched clauses
                 diff_html += break_down_replacement(res_clause, att_clause)
 
+    # Restore formatting by adding line breaks before headings
+    diff_html = restore_headings_formatting(diff_html)
     return diff_html
-
 
 def break_down_replacement(res_clause, att_clause):
     # This function applies a finer word-level comparison within replacement clauses
@@ -109,6 +113,14 @@ def break_down_replacement(res_clause, att_clause):
             )
 
     return diff_html + " "
+
+def restore_headings_formatting(html_text):
+    # Add line breaks before any phrase ending in a colon (assuming headings)
+    # This regex matches multi-word phrases ending with a colon, preceded by whitespace or start of text
+    formatted_text = re.sub(r'(\s|^)([A-Za-z\s-]+:)', r'<br><br>\2', html_text)
+    return formatted_text
+
+
 
 
 
