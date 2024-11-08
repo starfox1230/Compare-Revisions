@@ -58,17 +58,17 @@ def create_diff_by_section(resident_text, attending_text):
             for clause in resident_clauses[a1:a2]:
                 diff_html += clause + " "
 
-        # Handle inserted clauses as a block
+        # Handle inserted clauses without label
         elif opcode == 'insert':
             for clause in attending_clauses[b1:b2]:
-                diff_html += f'<span style="color:lightgreen;">[Inserted: {clause}]</span> '
+                diff_html += f'<span style="color:lightgreen;">{clause}</span> '
 
-        # Handle deleted clauses as a block
+        # Handle deleted clauses without label
         elif opcode == 'delete':
             for clause in resident_clauses[a1:a2]:
-                diff_html += f'<span style="color:#ff6b6b;text-decoration:line-through;">[Deleted: {clause}]</span> '
+                diff_html += f'<span style="color:#ff6b6b;text-decoration:line-through;">{clause}</span> '
 
-        # Handle replacements by word-by-word comparison within each clause
+        # Handle replacements by breaking down into smaller parts
         elif opcode == 'replace':
             res_clauses = resident_clauses[a1:a2]
             att_clauses = attending_clauses[b1:b2]
@@ -77,6 +77,7 @@ def create_diff_by_section(resident_text, attending_text):
                 diff_html += break_down_replacement(res_clause, att_clause)
 
     return diff_html
+
 
 def break_down_replacement(res_clause, att_clause):
     # This function applies a finer word-level comparison within replacement clauses
