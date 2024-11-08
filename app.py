@@ -33,6 +33,9 @@ def calculate_change_percentage(resident_text, attending_text):
     return round((1 - matcher.ratio()) * 100, 2)
 
 
+import difflib
+import re
+
 def split_into_paragraphs(text):
     # Split the text into paragraphs based on double line breaks or single line breaks after punctuation
     paragraphs = re.split(r'\n{2,}|\n(?=\w)', text)
@@ -67,40 +70,48 @@ def create_diff_by_section(resident_text, attending_text):
             for paragraph in resident_paragraphs[a1:a2]:
                 diff_html += f'<div style="color:#ff6b6b;text-decoration:line-through;">[Deleted: {paragraph}]</div><br><br>'
 
-        # Handle paragraph replacements by word-by-word comparison within each paragraph
+        # Handle replacements by breaking down into smaller parts
         elif opcode == 'replace':
             res_paragraphs = resident_paragraphs[a1:a2]
             att_paragraphs = attending_paragraphs[b1:b2]
             for res_paragraph, att_paragraph in zip(res_paragraphs, att_paragraphs):
-                # Compare the words within the mismatched paragraphs
-                word_matcher = difflib.SequenceMatcher(None, res_paragraph.split(), att_paragraph.split())
-                for word_opcode, w_a1, w_a2, w_b1, w_b2 in word_matcher.get_opcodes():
-                    if word_opcode == 'equal':
-                        diff_html += " ".join(res_paragraph.split()[w_a1:w_a2]) + " "
-                    elif word_opcode == 'replace':
-                        diff_html += (
-                            '<span style="color:#ff6b6b;text-decoration:line-through;">' +
-                            " ".join(res_paragraph.split()[w_a1:w_a2]) +
-                            '</span> <span style="color:lightgreen;">' +
-                            " ".join(att_paragraph.split()[w_b1:w_b2]) +
-                            '</span> '
-                        )
-                    elif word_opcode == 'delete':
-                        diff_html += (
-                            '<span style="color:#ff6b6b;text-decoration:line-through;">' +
-                            " ".join(res_paragraph.split()[w_a1:w_a2]) +
-                            '</span> '
-                        )
-                    elif word_opcode == 'insert':
-                        diff_html += (
-                            '<span style="color:lightgreen;">' +
-                            " ".join(att_paragraph.split()[w_b1:w_b2]) +
-                            '</span> '
-                        )
-
-                diff_html += "<br><br>"  # Separate each replaced paragraph with line breaks
+                # Apply word-by-word comparison within mismatched paragraphs
+                diff_html += break_down_replacement(res_paragraph, att_paragraph)
 
     return diff_html
+
+def break_down_replacement(res_paragraph, att_paragraph):
+    # This function applies a finer word-level comparison within replacement paragraphs
+    diff_html = ""
+    word_matcher = difflib.SequenceMatcher(None, res_paragraph.split(), att_paragraph.split())
+
+    for word_opcode, w_a1, w_a2, w_b1, w_b2 in word_matcher.get_opcodes():
+        if word_opcode == 'equal':
+            diff_html += " ".join(res_paragraph.split()[w_a1:w_a2]) + " "
+        elif word_opcode == 'replace':
+            # Show both deletions and insertions for replacements
+            diff_html += (
+                '<span style="color:#ff6b6b;text-decoration:line-through;">' +
+                " ".join(res_paragraph.split()[w_a1:w_a2]) +
+                '</span> <span style="color:lightgreen;">' +
+                " ".join(att_paragraph.split()[w_b1:w_b2]) +
+                '</span> '
+            )
+        elif word_opcode == 'delete':
+            diff_html += (
+                '<span style="color:#ff6b6b;text-decoration:line-through;">' +
+                " ".join(res_paragraph.split()[w_a1:w_a2]) +
+                '</span> '
+            )
+        elif word_opcode == 'insert':
+            diff_html += (
+                '<span style="color:lightgreen;">' +
+                " ".join(att_paragraph.split()[w_b1:w_b2]) +
+                '</span> '
+            )
+
+    return diff_html + "<br><br>"
+
 
 
 
